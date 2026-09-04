@@ -1,58 +1,73 @@
-import psutil as p
-
 import mysql.connector
+import socket
+
+hostname_atual = socket.gethostname()
 
 cnx = mysql.connector.connect(
-    host="10.18.33.43",
+    host="10.18.33.54",
     port=3306,
     user="AeroGuard",
     password="aeroguard2026!",
-    database="AeroGuard")
+    database="AeroGuard"
+)
 
 cur = cnx.cursor()
 
-def buscar_dados(hardware=None, tipo=None):
-    if hardware and tipo:
-        sql = "SELECT hardware, tipo, caputura, horario FROM psutil WHERE hardware = %s AND tipo = %s"
-        cur.execute(sql, (hardware, tipo))
-    elif hardware:
-        sql = "SELECT hardware, tipo, caputura, horario FROM psutil WHERE hardware = %s"
-        cur.execute(sql, (hardware,))
+def obter_id_usuario(hostname):
+    sql = "SELECT id FROM usuarios WHERE hostname = %s ORDER BY id DESC LIMIT 1"
+    cur.execute(sql, (hostname,))
+    resultado = cur.fetchone()
+    if resultado:
+        return resultado[0]
     else:
-        sql = "SELECT hardware, tipo, caputura, horario FROM psutil"
-        cur.execute(sql)
-       
+        print(f"Aviso: Usuário com hostname '{hostname}' não foi encontrado no banco.")
+        return None
+
+fk_usuario_id = obter_id_usuario(hostname_atual)
+
+def buscar_dados(hardware=None, tipo=None):
+    if not fk_usuario_id:
+        print("Impossível consultar: Usuário não identificado.")
+        return
+
+    sql = "SELECT hardware, tipo, captura, horario FROM capturas WHERE fk_usuario = %s"
+    parametros = [fk_usuario_id]
+
+    if hardware and tipo:
+        sql += " AND hardware = %s AND tipo = %s"
+        parametros.extend([hardware, tipo])
+    elif hardware:
+        sql += " AND hardware = %s"
+        parametros.append(hardware)
+
+    cur.execute(sql, tuple(parametros))
     resultados = cur.fetchall()
-   
+
     if not resultados:
         print("\nNenhum dado encontrado para essa pesquisa.")
         return
 
-    print(f"\n{'Hardware':<12} | {'Tipo de Dado':<20} | {'Valor Capturado':<15} | {'Horário da Captura'}")
-    print("-" * 55)
+    print(f"\n{'Hardware':<12} | {'Tipo de Dado':<25} | {'Valor Capturado':<15} | {'Horário da Captura'}")
+    print("-" * 75)
     for linha in resultados:
-        print(f"{linha[0]:<12} | {linha[1]:<20} | {linha[2]:<15} | {linha[3]}")
+        print(f"{linha[0]:<12} | {linha[1]:<25} | {linha[2]:<15} | {linha[3]}")
 
 while True:
-
     print("\n----- MENU -----")
-
     print("Digite o número para solicitar uma ação:")
-
-    print("1 - Vizualizar todos os dados capturados")
+    print("1 - Visualizar todos os dados capturados")
     print("2 - Visualizar dados capturados da CPU")
     print("3 - Visualizar dados capturados da Memória")
     print("4 - Visualizar dados capturados do Disco")
     print("5 - Visualizar usos capturados da CPU")
     print("6 - Visualizar frequências capturadas da CPU")
-    print("7 - Visualizar quantidade de núcleo capturados da CPU")
-    print("8 - Visualizar memória utilizada capturados")
-    print("9 - Visualizar memória total capturados")
-    print("10 - Visualizar memória disponivel capturados")
-    print("11 - Visualizar uso capturados do Disco")
-    print("12 - Visualizar espaço total capturados do Disco")
+    print("7 - Visualizar quantidade de núcleos capturados da CPU")
+    print("8 - Visualizar memória utilizada capturada")
+    print("9 - Visualizar memória total capturada")
+    print("10 - Visualizar memória disponível capturada")
+    print("11 - Visualizar uso capturado do Disco")
+    print("12 - Visualizar espaço total capturado do Disco")
     print("13 - Sair")
-
 
     opcao = int(input("\nDigite sua opção: "))
 
@@ -74,24 +89,24 @@ while True:
 
     elif opcao == 6:
         buscar_dados(hardware="CPU", tipo="Frequencia atual")
-       
+
     elif opcao == 7:
-        buscar_dados(hardware="CPU", tipo="núcleos")
+        buscar_dados(hardware="CPU", tipo="Quantidade de nucleos")
 
     elif opcao == 8:
-        buscar_dados(hardware="Memória", tipo="Utilizada")
+        buscar_dados(hardware="Memória", tipo="Utilizada (GB)")
 
     elif opcao == 9:
-        buscar_dados(hardware="Memória", tipo="Total")
+        buscar_dados(hardware="Memória", tipo="Total (GB)")
 
     elif opcao == 10:
-        buscar_dados(hardware="Memória", tipo="Disponível")
+        buscar_dados(hardware="Memória", tipo="Disponível (GB)")
 
     elif opcao == 11:
-        buscar_dados(hardware="Disco", tipo="Uso porcentual")
+        buscar_dados(hardware="Disco", tipo="Uso percentual")
 
     elif opcao == 12:
-        buscar_dados(hardware="Disco", tipo="Total GB C")
+        buscar_dados(hardware="Disco", tipo="Total (GB)")
 
     elif opcao == 13:
         print("\nDesligando programa...")
@@ -100,5 +115,4 @@ while True:
         break
 
     else:
-
         print("\nOpção inválida!")
