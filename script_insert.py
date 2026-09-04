@@ -17,57 +17,50 @@ cur = cnx.cursor()
 
 def salvar_usuario(hostname):
     sql = "INSERT INTO usuarios(hostname) VALUES (%s)"
-    cur.execute(sql,(hostname,))
+    cur.execute(sql, (hostname,))
     cnx.commit()
-    print(f"Usuário {hostname} cadastro")
+    print(f"Usuário {hostname} cadastrado no banco.")
 
     fk_id = cur.lastrowid  
     print(f"Usuário {hostname} cadastrado com o ID {fk_id}")
     return fk_id
 
 
+def salvar_dado(hardware, tipo, valor, fk_usuario_id):
+    sql = "INSERT INTO capturas (hardware, tipo, captura, fk_usuario) VALUES (%s, %s, %s, %s)"
+    cur.execute(sql, (hardware, tipo, float(valor), fk_usuario_id))
+    cnx.commit()
 
-def salvar_dado(hardware, tipo, valor, fkUsuarios):
-  sql = "INSERT INTO capturas (hardware, tipo, captura, fkusuarios) VALUES (%s, %s, %s, %s)"
-  cur.execute(sql, (hardware, tipo, float(valor), fkUsuarios))
-  cnx.commit()
 
 fkUsuarios = salvar_usuario(hostname_atual)
 
 while True:
+    cpuPorcentagem = p.cpu_percent(interval=1)
+    salvar_dado("CPU", "Uso percentual", cpuPorcentagem, fkUsuarios)
 
-            cpuPorcentagem = p.cpu_percent(interval=1)
-            salvar_dado("CPU", "Uso percentual", cpuPorcentagem, fkUsuarios)
+    cpuFrequencia = p.cpu_freq().current
+    salvar_dado("CPU", "Frequencia atual", cpuFrequencia, fkUsuarios)
 
-            ramPorcentagem = p.virtual_memory().percent
-            salvar_dado("CPU", "Frequencia atual", ramPorcentagem, fkUsuarios)
+    cpuContagem = p.cpu_count()
+    salvar_dado("CPU", "Quantidade de nucleos", cpuContagem, fkUsuarios)
 
-            discoPorcentagem = p.disk_usage('/').percent
-            salvar_dado("CPU", "núcleos", discoPorcentagem, fkUsuarios)
+    ramPorcentagem = p.virtual_memory().percent
+    salvar_dado("Memória", "Uso percentual", ramPorcentagem, fkUsuarios)
 
-            cpuFrequencia = p.cpu_freq().current
-            salvar_dado("CPU", "Frequencia atual", cpuFrequencia, fkUsuarios)
+    memoriaVirtual = round(p.virtual_memory().used / (1024**3), 2)
+    salvar_dado("Memória", "Utilizada (GB)", memoriaVirtual, fkUsuarios)
 
-            cpuContagem = p.cpu_count()
-            salvar_dado("CPU", "núcleos", cpuContagem, fkUsuarios)
+    memoriaTotal = round(p.virtual_memory().total / (1024**3), 2)
+    salvar_dado("Memória", "Total (GB)", memoriaTotal, fkUsuarios)
 
-            memoriaVirtual = round(p.virtual_memory().used / (1024**3), 2)
-            salvar_dado("Memória", "Utilizada", memoriaVirtual, fkUsuarios)
+    memoriaDisponivel = round(p.virtual_memory().available / (1024**3), 2)
+    salvar_dado("Memória", "Disponível (GB)", memoriaDisponivel, fkUsuarios)
 
-            memoriaTotal = round(p.virtual_memory().total / (1024**3), 2)
-            salvar_dado("Memória", "Total", memoriaTotal, fkUsuarios)
+    discoPorcentagem = p.disk_usage('C://').percent
+    salvar_dado("Disco", "Uso percentual", discoPorcentagem, fkUsuarios)
 
-            memoriaDisponivel = round(p.virtual_memory().available / (1024**3), 2)
-            salvar_dado("Memória", "Disponível", memoriaDisponivel, fkUsuarios)
+    espacoDisco = round(p.disk_usage("C://").total / (1024**3), 2)
+    salvar_dado("Disco", "Total (GB)", espacoDisco, fkUsuarios)
 
-            espacoDisco = round(p.disk_usage("/").total / (1024**3), 2)
-            salvar_dado("Disco", "Uso porcentual", espacoDisco, fkUsuarios)
-    
-            time.sleep(10)
-
-
-
-
-
-
-
+    print("Métricas capturadas e enviadas ao AeroGuard!")
+    time.sleep(10)
